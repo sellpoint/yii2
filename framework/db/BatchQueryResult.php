@@ -66,7 +66,10 @@ class BatchQueryResult extends BaseObject implements \Iterator
      * @var string|int the key for the current iteration
      */
     private $_key;
-
+    /**
+     * @var int the current batch number
+     */
+    private $_batchNumber;
 
     /**
      * Destructor.
@@ -90,6 +93,7 @@ class BatchQueryResult extends BaseObject implements \Iterator
         $this->_batch = null;
         $this->_value = null;
         $this->_key = null;
+        $this->_batchNumber = null;
     }
 
     /**
@@ -134,9 +138,15 @@ class BatchQueryResult extends BaseObject implements \Iterator
      */
     protected function fetchData()
     {
-        if ($this->_dataReader === null) {
-            $this->_dataReader = $this->query->createCommand($this->db)->query();
+        $this->_batchNumber = $this->_batchNumber === null ? 0 : $this->_batchNumber + 1;
+        if (isset($this->_dataReader)) {
+            $this->_dataReader->close();
+            $this->_dataReader = null;
         }
+        $this->_dataReader = $this->query
+            ->limit($this->batchSize)
+            ->offset($this->_batchNumber * $this->batchSize)
+            ->createCommand($this->db)->query();
 
         $rows = [];
         $count = 0;
